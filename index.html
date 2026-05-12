@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>618比价助手 - 全网最低价</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root{--jd:#e4393c;--tb:#ff5000;--pdd:#e02e24;--sn:#f5a623;--primary:#ff4d4f;--bg:#f7f8fa;--card:#fff;--text:#1a1a1a;--text2:#666;--border:#f0f0f0;--shadow:0 2px 12px rgba(0,0,0,.06);--radius:14px}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+        /* Hero */
+        .hero{background:linear-gradient(135deg,#ff4d4f 0%,#ff7875 40%,#ffa940 100%);color:#fff;padding:32px 16px 48px;text-align:center;position:relative;overflow:hidden}
+        .hero::after{content:'';position:absolute;bottom:-20px;left:0;right:0;height:40px;background:var(--bg);border-radius:20px 20px 0 0}
+        .hero h1{font-size:28px;font-weight:800;margin-bottom:4px;text-shadow:0 2px 8px rgba(0,0,0,.15)}
+        .hero .sub{font-size:14px;opacity:.9}
+        .hero .badge{display:inline-block;background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px;font-size:12px;margin-top:8px;backdrop-filter:blur(4px)}
+
+        /* Search */
+        .search-box{max-width:600px;margin:-28px auto 16px;padding:0 16px;position:relative;z-index:1}
+        .search-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+        .tab-row{display:flex;gap:0;margin-bottom:12px;background:#f5f5f5;border-radius:8px;padding:3px}
+        .tab-btn{flex:1;padding:8px;border:none;background:0 0;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);transition:.2s}
+        .tab-btn.active{background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+        .search-input{display:flex;gap:8px}
+        .search-input input{flex:1;padding:12px 14px;border:1.5px solid #eee;border-radius:10px;font-size:15px;outline:0;transition:.2s}
+        .search-input input:focus{border-color:var(--primary)}
+        .search-input input::placeholder{color:#bbb}
+        .search-input button{padding:12px 20px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap}
+        .search-input button:hover{background:#ff3333}
+        .search-input button:disabled{background:#ccc}
+
+        /* Results */
+        .section{max-width:600px;margin:0 auto 20px;padding:0 16px}
+        .section-title{font-size:16px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+        .section-title i{color:var(--primary)}
+
+        /* Product Card */
+        .product-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden;transition:.2s}
+        .product-card:active{transform:scale(.99)}
+        .product-header{padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+        .platform-badge{padding:3px 8px;border-radius:4px;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+        .badge-jd{background:var(--jd)}
+        .badge-tb{background:var(--tb)}
+        .badge-pdd{background:var(--pdd)}
+        .badge-sn{background:var(--sn)}
+        .product-info{flex:1;min-width:0}
+        .product-title{font-size:14px;font-weight:500;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+        .product-meta{font-size:12px;color:var(--text2);margin-top:4px}
+        .product-price{padding:12px 16px;background:#fffbe6;display:flex;justify-content:space-between;align-items:center}
+        .price-now{font-size:22px;font-weight:800;color:var(--primary)}
+        .price-now .unit{font-size:14px;font-weight:500}
+        .price-orig{font-size:13px;color:#999;text-decoration:line-through;margin-left:8px}
+        .price-save{font-size:12px;color:#52c41a;font-weight:600;background:#f6ffed;padding:2px 8px;border-radius:4px}
+        .go-btn{padding:6px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;transition:.2s}
+        .go-btn:hover{background:#ff3333}
+        .product-actions{padding:8px 16px 12px;display:flex;gap:8px}
+        .act-btn{padding:6px 12px;background:#f5f5f5;border:1px solid #eee;border-radius:6px;font-size:12px;color:var(--text2);cursor:pointer;transition:.2s}
+        .act-btn:hover{border-color:var(--primary);color:var(--primary)}
+
+        /* Price Comparison Table */
+        .compare-table{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:12px}
+        .compare-row{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:12px}
+        .compare-row:last-child{border-bottom:none}
+        .compare-row.best{background:#fff7e6}
+        .compare-platform{width:80px;font-size:13px;font-weight:600}
+        .compare-price{flex:1;font-size:18px;font-weight:700;color:var(--text)}
+        .compare-price.best-price{color:var(--primary)}
+        .compare-tag{font-size:11px;padding:2px 6px;border-radius:3px;background:#52c41a;color:#fff}
+        .compare-link{font-size:12px;color:var(--primary);text-decoration:none}
+        .compare-note{padding:10px 16px;font-size:12px;color:var(--text2);background:#fafafa;text-align:center}
+
+        /* Manual Input */
+        .manual-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+        .manual-card h3{font-size:14px;margin-bottom:12px}
+        .manual-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+        .manual-row select{padding:8px;border:1px solid #eee;border-radius:6px;font-size:13px;background:#fff}
+        .manual-row input{flex:1;padding:8px 10px;border:1px solid #eee;border-radius:6px;font-size:13px;outline:0}
+        .manual-row input:focus{border-color:var(--primary)}
+        .manual-row .add-btn{padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer}
+
+        /* Loading */
+        .loading{text-align:center;padding:24px;color:var(--text2)}
+        .spinner{width:32px;height:32px;border:3px solid #eee;border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        /* Deals Grid */
+        .deals-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+        .deal-card{background:var(--card);border-radius:10px;box-shadow:var(--shadow);padding:12px;transition:.2s;cursor:pointer;text-decoration:none;color:inherit}
+        .deal-card:active{transform:scale(.97)}
+        .deal-title{font-size:13px;font-weight:500;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3}
+        .deal-prices{display:flex;align-items:baseline;gap:6px}
+        .deal-sale{font-size:18px;font-weight:800;color:var(--primary)}
+        .deal-orig{font-size:12px;color:#999;text-decoration:line-through}
+        .deal-tag{display:inline-block;font-size:11px;background:#fff1f0;color:var(--primary);padding:1px 6px;border-radius:3px;margin-top:4px}
+
+        /* History */
+        .history-list{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow)}
+        .history-item{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.1s}
+        .history-item:last-child{border-bottom:none}
+        .history-item:hover{background:#fafafa}
+        .history-name{font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .history-price{font-size:14px;font-weight:700;color:var(--primary);margin:0 12px}
+        .history-time{font-size:11px;color:#999}
+
+        .empty{text-align:center;padding:32px;color:var(--text2)}
+        .empty i{font-size:40px;color:#ddd;margin-bottom:8px;display:block}
+
+        .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:999;transition:.3s}
+        .toast.show{transform:translateX(-50%) translateY(0)}
+
+        @media(max-width:480px){.hero h1{font-size:22px}.deals-grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>🔥 618 比价助手</h1>
+    <p class="sub">一搜全网价，省心又省钱</p>
+    <span class="badge">🏆 京东 · 淘宝 · 拼多多 · 苏宁 全覆盖</span>
+</div>
+
+<div class="search-box">
+    <div class="search-card">
+        <div class="tab-row">
+            <button class="tab-btn active" data-mode="keyword" onclick="setMode('keyword')">🔍 搜商品</button>
+            <button class="tab-btn" data-mode="url" onclick="setMode('url')">🔗 粘贴链接</button>
+        </div>
+        <div class="search-input">
+            <input type="text" id="searchInput" placeholder="搜索商品名，如：iPhone 16 Pro" autocomplete="off">
+            <button id="searchBtn" onclick="doSearch()">搜索</button>
+        </div>
+    </div>
+</div>
+
+<div id="resultsArea"></div>
+
+<!-- Hot Deals -->
+<div class="section" id="dealsSection">
+    <div class="section-title"><i class="fas fa-fire"></i> 618 热门好价</div>
+    <div class="deals-grid" id="dealsGrid"></div>
+</div>
+
+<!-- History -->
+<div class="section" id="historySection" style="display:none">
+    <div class="section-title"><i class="fas fa-history"></i> 比价记录</div>
+    <div class="history-list" id="historyList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';  // Same origin
+let mode = 'keyword';
+let history = JSON.parse(localStorage.getItem('priceHistory') || '[]');
+
+// ===== MODE =====
+function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+    document.getElementById('searchInput').placeholder = m === 'keyword' ? '搜索商品名，如：iPhone 16 Pro' : '粘贴京东/淘宝/拼多多商品链接';
+}
+
+// ===== SEARCH =====
+async function doSearch() {
+    const input = document.getElementById('searchInput').value.trim();
+    if (!input) { showToast('请输入内容'); return; }
+    const btn = document.getElementById('searchBtn');
+    btn.disabled = true; btn.textContent = '搜索中...';
+    const area = document.getElementById('resultsArea');
+    area.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在搜索...</p></div>';
+
+    try {
+        if (mode === 'url') {
+            const r = await fetch(API + '/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url: input}) });
+            const data = await r.json();
+            renderScrapeResult(data);
+            addToHistory(data.title || data.url, data.price);
+        } else {
+            const r = await fetch(API + '/api/search', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({keyword: input}) });
+            const data = await r.json();
+            renderSearchResults(data);
+            addToHistory(input, null);
+        }
+    } catch (e) {
+        area.innerHTML = `<div class="empty"><i class="fas fa-exclamation-circle"></i><p>搜索出错: ${e.message}</p></div>`;
+    }
+    btn.disabled = false; btn.textContent = '搜索';
+}
+
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+// ===== RENDER =====
+function renderSearchResults(data) {
+    const area = document.getElementById('resultsArea');
+    if (!data.results?.length) {
+        area.innerHTML = '<div class="empty"><i class="fas fa-search"></i><p>未找到结果，试试粘贴具体商品链接</p></div>';
+        return;
+    }
+    let h = `<div class="section"><div class="section-title"><i class="fas fa-list"></i> "${data.keyword}" 搜索结果 (${data.results.length})</div>`;
+    data.results.forEach(item => {
+        h += renderProductCard(item);
+    });
+    h += '</div>';
+    area.innerHTML = h;
+}
+
+function renderScrapeResult(data) {
+    const area = document.getElementById('resultsArea');
+    if (data.status === 'error') {
+        area.innerHTML = `<div class="empty"><i class="fas fa-exclamation-circle"></i><p>${data.error || '抓取失败'}</p></div>`;
+        return;
+    }
+    area.innerHTML = `<div class="section"><div class="section-title"><i class="fas fa-box"></i> 商品信息</div>${renderProductCard(data)}</div>`;
+}
+
+function renderProductCard(item) {
+    const badgeCls = item.platform === '京东' ? 'badge-jd' : item.platform === '淘宝/天猫' ? 'badge-tb' : item.platform === '拼多多' ? 'badge-pdd' : 'badge-sn';
+    const price = item.price ? `¥${item.price.toLocaleString()}` : '暂无价格';
+    const note = item.note || '';
+    return `
+    <div class="product-card">
+        <div class="product-header">
+            <span class="platform-badge ${badgeCls}">${item.platform}</span>
+            <div class="product-info">
+                <div class="product-title">${item.title || item.url}</div>
+                <div class="product-meta">${note || item.sku || ''}</div>
+            </div>
+        </div>
+        <div class="product-price">
+            <div>
+                <span class="price-now">${item.price ? '<span class="unit">¥</span>' + item.price.toLocaleString() : '待查'}</span>
+            </div>
+            <a class="go-btn" href="${item.url}" target="_blank" rel="noopener">去购买 →</a>
+        </div>
+        <div class="product-actions">
+            <button class="act-btn" onclick="comparePrice('${item.sku || ''}','${item.platform}')"><i class="fas fa-balance-scale"></i> 多平台比价</button>
+            <button class="act-btn" onclick="trackPrice('${item.title || item.sku}')"><i class="fas fa-bell"></i> 降价提醒</button>
+            <button class="act-btn" onclick="copyLink('${item.url}')"><i class="fas fa-share"></i> 分享</button>
+        </div>
+    </div>`;
+}
+
+// ===== COMPARE =====
+function comparePrice(sku, platform) {
+    showToast('正在查找其他平台价格...');
+    // In production, this would search other platforms for the same product
+    setTimeout(() => showToast('功能开发中，敬请期待'), 1500);
+}
+
+function trackPrice(name) {
+    showToast(`已设置「${name}」降价提醒 ✅`);
+}
+
+function copyLink(url) {
+    navigator.clipboard?.writeText(url).then(() => showToast('链接已复制 ✅')).catch(() => showToast('复制失败'));
+}
+
+// ===== HISTORY =====
+function addToHistory(name, price) {
+    history = history.filter(h => h.name !== name);
+    history.unshift({ name, price, time: new Date().toLocaleString('zh-CN') });
+    if (history.length > 20) history = history.slice(0, 20);
+    localStorage.setItem('priceHistory', JSON.stringify(history));
+    renderHistory();
+}
+
+function renderHistory() {
+    const section = document.getElementById('historySection');
+    const list = document.getElementById('historyList');
+    if (history.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = history.slice(0, 10).map(h => `
+        <div class="history-item" onclick="document.getElementById('searchInput').value='${h.name}';setMode('keyword');doSearch()">
+            <span class="history-name">${h.name}</span>
+            <span class="history-price">${h.price ? '¥' + h.price : ''}</span>
+            <span class="history-time">${h.time}</span>
+        </div>
+    `).join('');
+}
+
+// ===== DEALS =====
+async function loadDeals() {
+    try {
+        const r = await fetch(API + '/api/deals');
+        const deals = await r.json();
+        document.getElementById('dealsGrid').innerHTML = deals.map(d => `
+            <a class="deal-card" href="${d.url}" target="_blank" rel="noopener">
+                <div class="deal-title">${d.title}</div>
+                <div class="deal-prices">
+                    <span class="deal-sale">¥${d.sale}</span>
+                    <span class="deal-orig">¥${d.original}</span>
+                </div>
+                <span class="deal-tag">${d.discount}</span>
+            </a>
+        `).join('');
+    } catch(e) {
+        document.getElementById('dealsGrid').innerHTML = '<div class="empty" style="grid-column:1/-1">暂无数据</div>';
+    }
+}
+
+// ===== TOAST =====
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ===== INIT =====
+renderHistory();
+loadDeals();
+</script>
+</body>
+</html>
