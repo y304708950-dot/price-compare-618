@@ -3,272 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>比价助手 - 多平台价格对比</title>
+    <title>比价助手 - 多平台价格自动对比</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        :root {
-            --primary: #ff4d4f; --primary-hover: #ff3333;
-            --jd: #e4393c; --tb: #ff5000; --pdd: #e02e24; --sn: #f5a623; --dy: #222; --ks: #ff4906; --other: #666;
-            --bg: #f5f6f8; --card: #fff; --text: #1a1a1a; --text2: #666; --text3: #999;
-            --border: #e8e8e8; --shadow: 0 2px 12px rgba(0,0,0,.06); --radius: 12px;
-            --green: #52c41a; --blue: #1890ff; --orange: #faad14;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
-        /* Header */
-        .header { background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 50%, #ffa940 100%); color: #fff; padding: 24px 16px 32px; position: relative; }
-        .header::after { content: ''; position: absolute; bottom: -16px; left: 0; right: 0; height: 32px; background: var(--bg); border-radius: 16px 16px 0 0; }
-        .header h1 { font-size: 22px; font-weight: 800; }
-        .header .sub { font-size: 13px; opacity: .85; margin-top: 2px; }
-        .header-actions { display: flex; gap: 8px; margin-top: 12px; }
-        .header-btn { padding: 6px 14px; background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.3); color: #fff; border-radius: 8px; font-size: 12px; cursor: pointer; backdrop-filter: blur(4px); transition: .2s; }
-        .header-btn:hover { background: rgba(255,255,255,.3); }
-        .header-stats { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; opacity: .9; }
-
-        /* Container */
-        .container { max-width: 640px; margin: 0 auto; padding: 0 16px 80px; position: relative; z-index: 1; }
-
-        /* Tabs */
-        .tabs { display: flex; gap: 0; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px; padding: 4px; }
-        .tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600; border: none; background: none; cursor: pointer; border-radius: 8px; color: var(--text2); transition: .2s; }
-        .tab.active { background: var(--primary); color: #fff; }
-        .tab:hover:not(.active) { background: #f5f5f5; }
-
-        /* Card */
-        .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 12px; overflow: hidden; }
-
-        /* Quick Compare */
-        .quick-form { padding: 16px; }
-        .form-group { margin-bottom: 12px; }
-        .form-label { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 6px; display: block; }
-        .form-input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: .2s; }
-        .form-input:focus { border-color: var(--primary); }
-        .form-input::placeholder { color: #ccc; }
-
-        .price-inputs { display: flex; flex-direction: column; gap: 8px; }
-        .price-row { display: flex; gap: 8px; align-items: center; }
-        .price-row select { padding: 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; background: #fff; min-width: 80px; }
-        .price-row input[type="number"] { flex: 1; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; }
-        .price-row input[type="number"]:focus { border-color: var(--primary); }
-        .price-row input[type="url"] { flex: 2; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 12px; outline: none; }
-        .price-row .remove-btn { width: 32px; height: 32px; border: none; background: #f5f5f5; color: var(--text3); border-radius: 6px; cursor: pointer; flex-shrink: 0; }
-        .price-row .remove-btn:hover { background: #ff4d4f22; color: var(--primary); }
-        .add-price-btn { width: 100%; padding: 8px; border: 1.5px dashed var(--border); border-radius: 8px; background: none; color: var(--primary); font-size: 13px; cursor: pointer; margin-top: 4px; }
-        .add-price-btn:hover { background: #fff1f0; border-color: var(--primary); }
-
-        .submit-btn { width: 100%; padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: .2s; }
-        .submit-btn:hover { background: var(--primary-hover); }
-        .submit-btn:disabled { background: #ccc; }
-        
-        .search-btn { width: 100%; padding: 12px; background: var(--blue); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: .2s; margin-bottom: 12px; }
-        .search-btn:hover { background: #096dd9; }
-        .search-btn:disabled { background: #ccc; }
-        .search-btn .fa { margin-right: 6px; }
-
-        /* URL Parse */
-        .url-bar { display: flex; gap: 8px; margin-bottom: 12px; }
-        .url-bar input { flex: 1; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; }
-        .url-bar input:focus { border-color: var(--blue); }
-        .url-bar button { padding: 10px 16px; background: var(--blue); color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-        .url-bar button:hover { background: #096dd9; }
-
-        /* Compare Result */
-        .compare-result { padding: 16px; }
-        .compare-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
-        .compare-savings { background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 8px; padding: 10px 14px; font-size: 14px; color: var(--green); font-weight: 600; margin-bottom: 12px; text-align: center; }
-        .compare-list { display: flex; flex-direction: column; gap: 8px; }
-        .compare-item { display: flex; align-items: center; padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border); gap: 12px; transition: .2s; }
-        .compare-item.cheapest { background: #fff7e6; border-color: #ffd666; }
-        .compare-item .plat-badge { padding: 3px 8px; border-radius: 4px; color: #fff; font-size: 11px; font-weight: 700; white-space: nowrap; }
-        .compare-item .price-val { font-size: 20px; font-weight: 800; flex: 1; }
-        .compare-item .price-val.cheapest-price { color: var(--primary); }
-        .compare-item .cheapest-tag { font-size: 11px; padding: 2px 8px; background: var(--green); color: #fff; border-radius: 3px; }
-        .compare-item .go-link { font-size: 12px; color: var(--blue); text-decoration: none; }
-
-        /* Product List */
-        .product-list { display: flex; flex-direction: column; gap: 8px; }
-        .product-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; transition: .2s; cursor: pointer; }
-        .product-card:active { transform: scale(.99); }
-        .product-top { padding: 14px 16px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .product-name { font-size: 15px; font-weight: 600; flex: 1; }
-        .product-meta { font-size: 12px; color: var(--text3); margin-top: 4px; }
-        .product-price-range { display: flex; align-items: baseline; gap: 6px; }
-        .product-lowest { font-size: 20px; font-weight: 800; color: var(--primary); }
-        .product-highest { font-size: 13px; color: var(--text3); }
-        .product-badges { display: flex; gap: 4px; padding: 0 16px 12px; flex-wrap: wrap; }
-        .plat-mini { padding: 2px 6px; border-radius: 3px; color: #fff; font-size: 10px; font-weight: 700; }
-        .product-actions { display: flex; border-top: 1px solid var(--border); }
-        .product-act { flex: 1; padding: 10px; text-align: center; font-size: 12px; color: var(--text2); border: none; background: none; cursor: pointer; }
-        .product-act:not(:last-child) { border-right: 1px solid var(--border); }
-        .product-act:hover { background: #f5f5f5; color: var(--primary); }
-        .product-act .fa { margin-right: 4px; }
-
-        /* Search */
-        .search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
-        .search-bar input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; outline: none; }
-        .search-bar input:focus { border-color: var(--primary); }
-
-        /* Product Detail Modal */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: .3s; }
-        .modal-overlay.show { opacity: 1; pointer-events: all; }
-        .modal { background: var(--card); border-radius: 16px 16px 0 0; width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; transform: translateY(100%); transition: .3s; }
-        .modal-overlay.show .modal { transform: translateY(0); }
-        .modal-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--card); z-index: 1; }
-        .modal-header h3 { font-size: 16px; }
-        .modal-close { width: 32px; height: 32px; border: none; background: #f5f5f5; border-radius: 50%; cursor: pointer; font-size: 16px; }
-        .modal-body { padding: 16px; }
-
-        /* Price History in Modal */
-        .price-platform { margin-bottom: 16px; }
-        .price-platform-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .price-platform-name { font-weight: 600; font-size: 14px; }
-        .price-platform-current { font-size: 18px; font-weight: 800; color: var(--primary); margin-left: auto; }
-        .price-history-list { display: flex; flex-direction: column; gap: 4px; }
-        .price-history-item { display: flex; justify-content: space-between; padding: 8px 12px; background: #fafafa; border-radius: 6px; font-size: 13px; }
-        .price-history-item .ph-price { font-weight: 600; }
-        .price-history-item .ph-time { color: var(--text3); font-size: 11px; }
-
-        /* Add Price Form in Modal */
-        .add-price-form { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
-        .add-price-form h4 { font-size: 14px; margin-bottom: 10px; }
-
-        /* Toast */
-        .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #333; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 200; transition: .3s; }
-        .toast.show { transform: translateX(-50%) translateY(0); }
-
-        /* Loading */
-        .loading { text-align: center; padding: 40px; color: var(--text3); }
-        .loading .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Empty */
-        .empty { text-align: center; padding: 40px 20px; color: var(--text3); }
-        .empty i { font-size: 40px; margin-bottom: 8px; display: block; }
-        .empty p { font-size: 14px; }
-
-        /* Platform colors */
-        .bg-jd { background: var(--jd); } .bg-tb { background: var(--tb); } .bg-pdd { background: var(--pdd); }
-        .bg-sn { background: var(--sn); } .bg-dy { background: var(--dy); } .bg-ks { background: var(--ks); }
-        .bg-天猫 { background: #e03e28; } .bg-other { background: var(--other); }
-
-        @media (min-width: 768px) {
-            .container { padding-top: 16px; }
-            .header { border-radius: 0 0 16px 16px; max-width: 640px; margin: 0 auto; }
-        }
-        @media (max-width: 360px) {
-            .header h1 { font-size: 18px; }
-            .price-row { flex-wrap: wrap; }
-            .price-row input[type="url"] { flex-basis: 100%; }
-        }
+        :root{--pri:#ff4d4f;--pri-h:#ff3333;--jd:#e4393c;--tb:#ff5000;--tm:#e03e28;--pdd:#e02e24;--sn:#f5a623;--dy:#222;--green:#52c41a;--blue:#1890ff;--bg:#f5f6f8;--card:#fff;--txt:#1a1a1a;--txt2:#666;--txt3:#999;--border:#e8e8e8;--shadow:0 2px 12px rgba(0,0,0,.06);--r:12px}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh}
+        .header{background:linear-gradient(135deg,#ff4d4f,#ff7875 50%,#ffa940);color:#fff;padding:24px 16px 32px;position:relative}
+        .header::after{content:'';position:absolute;bottom:-16px;left:0;right:0;height:32px;background:var(--bg);border-radius:16px 16px 0 0}
+        .header h1{font-size:22px;font-weight:800}.header .sub{font-size:13px;opacity:.85;margin-top:2px}
+        .hdr-acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+        .hdr-btn{padding:6px 14px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;font-size:12px;cursor:pointer;backdrop-filter:blur(4px);transition:.2s}
+        .hdr-btn:hover{background:rgba(255,255,255,.3)}
+        .hdr-stats{display:flex;gap:16px;margin-top:10px;font-size:12px;opacity:.9}
+        .wrap{max-width:640px;margin:0 auto;padding:0 16px 80px;position:relative;z-index:1}
+        .tabs{display:flex;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:16px;padding:4px}
+        .tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-radius:8px;color:var(--txt2);transition:.2s}
+        .tab.active{background:var(--pri);color:#fff}.tab:hover:not(.active){background:#f5f5f5}
+        .card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
+        .search-box{padding:16px}
+        .search-input{display:flex;gap:8px;margin-bottom:12px}
+        .search-input input{flex:1;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;outline:none;transition:.2s}
+        .search-input input:focus{border-color:var(--pri)}
+        .search-input button{padding:12px 20px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap}
+        .search-input button:hover{background:var(--pri-h)}.search-input button:disabled{background:#ccc}
+        .plat-links{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+        .plat-link{display:flex;align-items:center;gap:6px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);text-decoration:none;color:var(--txt);font-size:13px;font-weight:500;transition:.2s;cursor:pointer}
+        .plat-link:hover{border-color:var(--pri);background:#fff1f0}
+        .plat-link .icon{font-size:16px}.plat-link .name{flex:1}.plat-link .arrow{color:var(--txt3);font-size:11px}
+        .price-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+        .price-cell{padding:10px;border:1.5px solid var(--border);border-radius:10px;text-align:center;transition:.2s}
+        .price-cell.has-price{border-color:var(--green);background:#f6ffed}
+        .price-cell .cell-plat{font-size:11px;color:var(--txt2);margin-bottom:4px}
+        .price-cell .cell-input{width:100%;border:none;text-align:center;font-size:18px;font-weight:700;outline:none;background:transparent;color:var(--pri)}
+        .price-cell .cell-input::placeholder{color:#ddd;font-weight:400;font-size:14px}
+        .price-cell .cell-url{width:100%;border:none;text-align:center;font-size:10px;outline:none;background:transparent;color:var(--txt3);margin-top:4px}
+        .submit-row{margin-top:12px;display:flex;gap:8px}
+        .submit-btn{flex:1;padding:12px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s}
+        .submit-btn:hover{background:var(--pri-h)}.submit-btn:disabled{background:#ccc}
+        .reset-btn{padding:12px 16px;background:#f5f5f5;color:var(--txt2);border:none;border-radius:10px;font-size:14px;cursor:pointer}
+        .result-box{padding:16px}
+        .result-title{font-size:16px;font-weight:700;margin-bottom:10px}
+        .result-savings{background:#f6ffed;border:1px solid #b7eb8f;border-radius:8px;padding:10px 14px;font-size:14px;color:var(--green);font-weight:600;margin-bottom:12px;text-align:center}
+        .result-list{display:flex;flex-direction:column;gap:8px}
+        .result-item{display:flex;align-items:center;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);gap:10px}
+        .result-item.best{background:#fff7e6;border-color:#ffd666}
+        .plat-badge{padding:3px 8px;border-radius:4px;color:#fff;font-size:11px;font-weight:700;white-space:nowrap}
+        .bg-jd{background:var(--jd)}.bg-tb{background:var(--tb)}.bg-tm{background:var(--tm)}.bg-pdd{background:var(--pdd)}.bg-sn{background:var(--sn)}.bg-dy{background:var(--dy)}.bg-other{background:var(--txt3)}
+        .result-price{font-size:20px;font-weight:800;flex:1}.result-price.best-price{color:var(--pri)}
+        .best-tag{font-size:11px;padding:2px 8px;background:var(--green);color:#fff;border-radius:3px}
+        .go-link{font-size:12px;color:var(--blue);text-decoration:none}
+        .prod-list{display:flex;flex-direction:column;gap:8px}
+        .prod-card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:.2s}
+        .prod-card:active{transform:scale(.99)}
+        .prod-top{padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start}
+        .prod-name{font-size:15px;font-weight:600;flex:1}.prod-meta{font-size:12px;color:var(--txt3);margin-top:4px}
+        .prod-lowest{font-size:20px;font-weight:800;color:var(--pri)}.prod-highest{font-size:13px;color:var(--txt3)}
+        .prod-badges{display:flex;gap:4px;padding:0 16px 12px;flex-wrap:wrap}
+        .mini-badge{padding:2px 6px;border-radius:3px;color:#fff;font-size:10px;font-weight:700}
+        .prod-acts{display:flex;border-top:1px solid var(--border)}
+        .prod-act{flex:1;padding:10px;text-align:center;font-size:12px;color:var(--txt2);border:none;background:none;cursor:pointer}
+        .prod-act:not(:last-child){border-right:1px solid var(--border)}.prod-act:hover{background:#f5f5f5;color:var(--pri)}
+        .list-search{display:flex;gap:8px;margin-bottom:16px}
+        .list-search input{flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none}.list-search input:focus{border-color:var(--pri)}
+        .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:.3s}
+        .modal-bg.show{opacity:1;pointer-events:all}
+        .modal{background:var(--card);border-radius:16px 16px 0 0;width:100%;max-width:640px;max-height:85vh;overflow-y:auto;transform:translateY(100%);transition:.3s}
+        .modal-bg.show .modal{transform:translateY(0)}
+        .modal-hd{padding:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:var(--card);z-index:1}
+        .modal-hd h3{font-size:16px}.modal-x{width:32px;height:32px;border:none;background:#f5f5f5;border-radius:50%;cursor:pointer;font-size:16px}
+        .modal-bd{padding:16px}
+        .hist-plat{margin-bottom:16px}.hist-hd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+        .hist-name{font-weight:600;font-size:14px}.hist-cur{font-size:18px;font-weight:800;color:var(--pri);margin-left:auto}
+        .hist-list{display:flex;flex-direction:column;gap:4px}
+        .hist-item{display:flex;justify-content:space-between;padding:8px 12px;background:#fafafa;border-radius:6px;font-size:13px}
+        .hist-item .hp{font-weight:600}.hist-item .ht{color:var(--txt3);font-size:11px}
+        .add-form{border-top:1px solid var(--border);padding-top:16px;margin-top:16px}
+        .add-form h4{font-size:14px;margin-bottom:10px}
+        .add-row{display:flex;gap:8px;margin-top:8px}
+        .add-row select{padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#fff}
+        .add-row input{flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;outline:none}.add-row input:focus{border-color:var(--pri)}
+        .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:200;transition:.3s}
+        .toast.show{transform:translateX(-50%) translateY(0)}
+        .empty{text-align:center;padding:40px 20px;color:var(--txt3)}.empty i{font-size:40px;margin-bottom:8px;display:block}.empty p{font-size:14px}
+        .loading{text-align:center;padding:24px;color:var(--txt2)}
+        .spinner{width:32px;height:32px;border:3px solid #eee;border-top-color:var(--pri);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 8px}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @media(max-width:400px){.plat-links{grid-template-columns:repeat(2,1fr)}.price-grid{grid-template-columns:1fr}}
+        @media(min-width:768px){.wrap{padding-top:16px}.header{border-radius:0 0 16px 16px;max-width:640px;margin:0 auto}}
     </style>
 </head>
 <body>
 
 <div class="header">
     <h1>📊 比价助手</h1>
-    <p class="sub">多平台价格自动搜索与对比</p>
-    <div class="header-stats" id="headerStats"></div>
-    <div class="header-actions">
-        <button class="header-btn" onclick="exportCSV()"><i class="fas fa-download"></i> 导出CSV</button>
-        <button class="header-btn" onclick="switchView('quick')"><i class="fas fa-plus"></i> 快速比价</button>
+    <p class="sub">输入商品名 → 自动搜索各平台价格 → 一键对比</p>
+    <div class="hdr-stats" id="stats"></div>
+    <div class="hdr-acts">
+        <button class="hdr-btn" onclick="exportCSV()"><i class="fas fa-download"></i> 导出CSV</button>
+        <button class="hdr-btn" onclick="clearAll()"><i class="fas fa-trash"></i> 清空数据</button>
     </div>
 </div>
 
-<div class="container">
-    <!-- Tabs -->
+<div class="wrap">
     <div class="tabs">
-        <button class="tab active" data-view="list" onclick="switchView('list')">📦 商品列表</button>
-        <button class="tab" data-view="quick" onclick="switchView('quick')">🔍 搜索比价</button>
+        <button class="tab active" data-t="search" onclick="switchTab('search')">🔍 搜商品比价</button>
+        <button class="tab" data-t="list" onclick="switchTab('list')">📦 历史记录</button>
     </div>
 
-    <!-- List View -->
-    <div id="listView">
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="搜索商品..." oninput="debounceSearch()">
-        </div>
-        <div id="productList" class="product-list">
-            <div class="loading"><div class="spinner"></div></div>
-        </div>
-    </div>
-
-    <!-- Quick Compare View -->
-    <div id="quickView" style="display:none">
+    <div id="searchTab">
         <div class="card">
-            <div class="quick-form">
-                <!-- URL Parse Bar -->
-                <div class="url-bar">
-                    <input type="url" id="urlInput" placeholder="粘贴商品链接自动识别平台...">
-                    <button onclick="parseURL()">识别</button>
+            <div class="search-box">
+                <div class="search-input">
+                    <input type="text" id="kwInput" placeholder="输入商品名，如：iPhone 16 Pro 256GB" autocomplete="off">
+                    <button id="searchBtn" onclick="doSearch()">搜索</button>
                 </div>
-
-                <div class="form-group">
-                    <label class="form-label">商品名称</label>
-                    <input type="text" class="form-input" id="productName" placeholder="如：iPhone 16 Pro 256GB">
-                </div>
-
-                <!-- Auto Search Button -->
-                <button class="search-btn" id="autoSearchBtn" onclick="autoSearch()">
-                    <i class="fas fa-search"></i> 自动搜索各平台价格
-                </button>
-
-                <div class="form-group">
-                    <label class="form-label">各平台价格</label>
-                    <div class="price-inputs" id="priceInputs">
-                        <div class="price-row">
-                            <select id="plat0">
-                                <option value="京东">京东</option>
-                                <option value="淘宝">淘宝</option>
-                                <option value="天猫">天猫</option>
-                                <option value="拼多多">拼多多</option>
-                                <option value="苏宁">苏宁</option>
-                                <option value="抖音">抖音</option>
-                                <option value="快手">快手</option>
-                                <option value="其他">其他</option>
-                            </select>
-                            <input type="number" placeholder="价格" id="price0" step="0.01" min="0">
-                            <input type="url" placeholder="链接（可选）" id="url0">
-                        </div>
-                        <div class="price-row">
-                            <select id="plat1">
-                                <option value="淘宝">淘宝</option>
-                                <option value="京东">京东</option>
-                                <option value="天猫">天猫</option>
-                                <option value="拼多多">拼多多</option>
-                                <option value="苏宁">苏宁</option>
-                                <option value="抖音">抖音</option>
-                                <option value="快手">快手</option>
-                                <option value="其他">其他</option>
-                            </select>
-                            <input type="number" placeholder="价格" id="price1" step="0.01" min="0">
-                            <input type="url" placeholder="链接（可选）" id="url1">
-                        </div>
+                <div id="platLinks" style="display:none">
+                    <div style="font-size:13px;color:var(--txt2);margin-bottom:8px;font-weight:600">
+                        <i class="fas fa-external-link-alt"></i> 点击跳转各平台搜索（新窗口打开）
                     </div>
-                    <button class="add-price-btn" onclick="addPriceRow()">+ 添加更多平台</button>
+                    <div class="plat-links" id="platLinksGrid"></div>
                 </div>
-
-                <div class="form-group">
-                    <label class="form-label">分类（可选）</label>
-                    <input type="text" class="form-input" id="productCategory" placeholder="如：手机、家电、美妆">
+                <div id="priceEntry" style="display:none">
+                    <h3 style="font-size:14px;font-weight:600;margin-bottom:10px;color:var(--txt2)">
+                        <i class="fas fa-edit" style="color:var(--pri)"></i> 填入各平台价格（自动搜索已填入）
+                    </h3>
+                    <div class="price-grid" id="priceGrid"></div>
+                    <div class="submit-row">
+                        <button class="submit-btn" id="compareBtn" onclick="doCompare()">💾 保存并比价</button>
+                        <button class="reset-btn" onclick="resetSearch()">重置</button>
+                    </div>
                 </div>
-
-                <button class="submit-btn" onclick="quickCompare()">开始比价</button>
             </div>
         </div>
+        <div id="resultBox"></div>
+    </div>
 
-        <!-- Compare Result -->
-        <div id="compareResult" style="display:none"></div>
+    <div id="listTab" style="display:none">
+        <div class="list-search">
+            <input type="text" id="listSearch" placeholder="搜索历史记录..." oninput="debounceLoad()">
+        </div>
+        <div id="prodList" class="prod-list"></div>
     </div>
 </div>
 
-<!-- Detail Modal -->
-<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
     <div class="modal">
-        <div class="modal-header">
-            <h3 id="modalTitle">商品详情</h3>
-            <button class="modal-close" onclick="closeModal()">✕</button>
+        <div class="modal-hd">
+            <h3 id="mTitle">商品详情</h3>
+            <button class="modal-x" onclick="closeModal()">✕</button>
         </div>
-        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-bd" id="mBody"></div>
     </div>
 </div>
 
@@ -276,430 +161,329 @@
 
 <script>
 const API = '';
-let priceRowCount = 2;
+let currentKeyword = '';
 let searchTimer = null;
 
-// ===== Platform color =====
-function platBadge(name) {
-    const map = { '京东': 'bg-jd', '淘宝': 'bg-tb', '天猫': 'bg-天猫', '拼多多': 'bg-pdd', '苏宁': 'bg-sn', '抖音': 'bg-dy', '快手': 'bg-ks' };
-    return map[name] || 'bg-other';
+const PLATFORMS = [
+    {name:'京东',key:'jd',color:'#e4393c'},
+    {name:'淘宝',key:'tb',color:'#ff5000'},
+    {name:'天猫',key:'tm',color:'#e03e28'},
+    {name:'拼多多',key:'pdd',color:'#e02e24'},
+    {name:'苏宁',key:'sn',color:'#f5a623'},
+    {name:'抖音',key:'dy',color:'#222'},
+];
+
+// ===== LocalStorage Data Layer =====
+function getProducts() {
+    try { return JSON.parse(localStorage.getItem('bj_products') || '[]'); } catch { return []; }
+}
+function saveProducts(products) {
+    localStorage.setItem('bj_products', JSON.stringify(products));
+}
+function getPrices() {
+    try { return JSON.parse(localStorage.getItem('bj_prices') || '[]'); } catch { return []; }
+}
+function savePrices(prices) {
+    localStorage.setItem('bj_prices', JSON.stringify(prices));
+}
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+function now() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 }
 
-// ===== View Switch =====
-function switchView(view) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === view));
-    document.getElementById('listView').style.display = view === 'list' ? 'block' : 'none';
-    document.getElementById('quickView').style.display = view === 'quick' ? 'block' : 'none';
-    if (view === 'list') loadProducts();
+function badge(n){const m={京东:'bg-jd',淘宝:'bg-tb',天猫:'bg-tm',拼多多:'bg-pdd',苏宁:'bg-sn',抖音:'bg-dy'};return m[n]||'bg-other'}
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+
+function switchTab(tab){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.t===tab));
+    document.getElementById('searchTab').style.display=tab==='search'?'block':'none';
+    document.getElementById('listTab').style.display=tab==='list'?'block':'none';
+    if(tab==='list')loadProducts();
 }
 
-// ===== Toast =====
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
+function updateStats(){
+    const p=getProducts(), pr=getPrices();
+    document.getElementById('stats').innerHTML=`<span>📦 ${p.length} 件</span><span>💰 ${pr.length} 条记录</span>`;
 }
 
-// ===== Stats =====
-async function loadStats() {
-    try {
-        const r = await fetch(API + '/api/stats');
-        const d = await r.json();
-        document.getElementById('headerStats').innerHTML =
-            `<span>📦 ${d.product_count} 件商品</span><span>💰 ${d.price_count} 条价格记录</span>`;
-    } catch(e) {}
+// ===== Search =====
+function generateSearchUrls(keyword){
+    const q=encodeURIComponent(keyword);
+    return [
+        {platform:'京东',url:`https://search.jd.com/Search?keyword=${q}&enc=utf-8`,icon:'🔴'},
+        {platform:'淘宝',url:`https://s.taobao.com/search?q=${q}`,icon:'🟠'},
+        {platform:'天猫',url:`https://list.tmall.com/search_product.htm?q=${q}`,icon:'🔶'},
+        {platform:'拼多多',url:`https://mobile.yangkeduo.com/search_result.html?search_key=${q}`,icon:'🔴'},
+        {platform:'苏宁',url:`https://search.suning.com/${q}/`,icon:'🟡'},
+        {platform:'抖音',url:`https://haohuo.jinritemai.com/views/search/result?keyword=${q}`,icon:'⚫'},
+    ];
 }
 
-// ===== Products List =====
-async function loadProducts(search = '') {
-    try {
-        const url = search ? `/api/products?search=${encodeURIComponent(search)}` : '/api/products';
-        const r = await fetch(API + url);
-        const products = await r.json();
-        renderProducts(products);
-    } catch(e) {
-        document.getElementById('productList').innerHTML =
-            `<div class="empty"><i class="fas fa-exclamation-circle"></i><p>加载失败: ${e.message}</p></div>`;
+async function doSearch(){
+    const kw=document.getElementById('kwInput').value.trim();
+    if(!kw){toast('请输入商品名');return}
+    currentKeyword=kw;
+    const btn=document.getElementById('searchBtn');
+    btn.disabled=true;btn.textContent='搜索中...';
+
+    // Show platform links
+    const links=generateSearchUrls(kw);
+    document.getElementById('platLinksGrid').innerHTML=links.map(p=>`
+        <a class="plat-link" href="${p.url}" target="_blank" rel="noopener">
+            <span class="icon">${p.icon}</span><span class="name">${p.platform}</span><span class="arrow">搜索 →</span>
+        </a>
+    `).join('');
+    document.getElementById('platLinks').style.display='block';
+
+    // Init price grid
+    renderPriceGrid();
+
+    // Try auto-search via backend
+    try{
+        const r=await fetch(API+'/api/search-prices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:kw})});
+        const data=await r.json();
+        if(data.results&&data.results.length>0){
+            // Auto-fill prices
+            data.results.forEach(item=>{
+                const key=PLATFORMS.find(p=>p.name===item.platform)?.key;
+                if(key){
+                    const el=document.getElementById('price_'+key);
+                    if(el&&!el.value){el.value=item.price;markFilled(key)}
+                    const urlEl=document.getElementById('url_'+key);
+                    if(urlEl&&!urlEl.value&&item.url)urlEl.value=item.url;
+                }
+            });
+            toast(`自动找到 ${data.results.length} 个平台的价格 ✅`);
+        }
+    }catch(e){console.log('Auto-search failed:',e)}
+
+    btn.disabled=false;btn.textContent='搜索';
+}
+
+function renderPriceGrid(){
+    const grid=document.getElementById('priceGrid');
+    grid.innerHTML=PLATFORMS.map(p=>`
+        <div class="price-cell" id="cell_${p.key}">
+            <div class="cell-plat" style="color:${p.color};font-weight:600">${p.name}</div>
+            <input type="number" class="cell-input" id="price_${p.key}" placeholder="输入价格" step="0.01" min="0" oninput="markFilled('${p.key}')">
+            <input type="url" class="cell-url" id="url_${p.key}" placeholder="粘贴商品链接">
+        </div>
+    `).join('');
+    document.getElementById('priceEntry').style.display='block';
+}
+
+function markFilled(key){
+    const cell=document.getElementById('cell_'+key);
+    const price=document.getElementById('price_'+key).value;
+    cell.classList.toggle('has-price',!!price);
+}
+
+function doCompare(){
+    if(!currentKeyword){toast('请先搜索');return}
+    const prices=[];
+    PLATFORMS.forEach(p=>{
+        const price=document.getElementById('price_'+p.key).value;
+        const url=document.getElementById('url_'+p.key).value;
+        if(price)prices.push({platform:p.name,price:parseFloat(price),url,recorded_at:now()});
+    });
+    if(!prices.length){toast('至少输入一个平台的价格');return}
+
+    // Save to localStorage
+    const products=getProducts();
+    const allPrices=getPrices();
+
+    // Check if product exists
+    let product=products.find(p=>p.name===currentKeyword);
+    if(!product){
+        product={id:genId(),name:currentKeyword,category:'',created_at:now()};
+        products.push(product);
     }
+    product.updated_at=now();
+    saveProducts(products);
+
+    // Add prices
+    prices.forEach(pr=>{
+        allPrices.push({id:genId(),product_id:product.id,...pr});
+    });
+    savePrices(allPrices);
+
+    // Show result
+    const sorted=[...prices].sort((a,b)=>a.price-b.price);
+    const savings=sorted.length>=2?sorted[sorted.length-1].price-sorted[0].price:0;
+    renderResult({name:currentKeyword,prices:sorted.map((p,i)=>({...p,is_cheapest:i===0})),savings});
+    updateStats();
+    toast('比价已保存 ✅');
 }
 
-function renderProducts(products) {
-    const el = document.getElementById('productList');
-    if (!products.length) {
-        el.innerHTML = `<div class="empty"><i class="fas fa-box-open"></i><p>还没有商品，输入商品名自动搜索价格</p></div>`;
-        return;
-    }
-    el.innerHTML = products.map(p => {
-        const badges = p.prices.map(pr =>
-            `<span class="plat-mini ${platBadge(pr.platform)}">${pr.platform} ¥${pr.price}</span>`
-        ).join('');
-        return `
-        <div class="product-card" onclick="openProduct(${p.id})">
-            <div class="product-top">
-                <div>
-                    <div class="product-name">${esc(p.name)}</div>
-                    <div class="product-meta">${p.platform_count}个平台 · ${esc(p.category || '未分类')}</div>
-                </div>
-                <div class="product-price-range">
-                    ${p.min_price ? `<span class="product-lowest">¥${p.min_price}</span>` : ''}
-                    ${p.max_price && p.max_price !== p.min_price ? `<span class="product-highest">~¥${p.max_price}</span>` : ''}
-                </div>
+function renderResult(data){
+    const el=document.getElementById('resultBox');
+    const savings=data.savings>0?`<div class="result-savings">💰 最多可省 ¥${data.savings.toFixed(2)}</div>`:'';
+    el.innerHTML=`<div class="card"><div class="result-box">
+        <div class="result-title">"${esc(data.name)}" 比价结果</div>
+        ${savings}
+        <div class="result-list">${data.prices.map((p,i)=>`
+            <div class="result-item ${i===0?'best':''}">
+                <span class="plat-badge ${badge(p.platform)}">${p.platform}</span>
+                <span class="result-price ${i===0?'best-price':''}">¥${p.price}</span>
+                ${i===0?'<span class="best-tag">最低价</span>':''}
+                ${p.url?`<a class="go-link" href="${p.url}" target="_blank">去购买 →</a>`:''}
+            </div>`).join('')}
+        </div>
+    </div></div>`;
+}
+
+function resetSearch(){
+    currentKeyword='';
+    document.getElementById('kwInput').value='';
+    document.getElementById('platLinks').style.display='none';
+    document.getElementById('priceEntry').style.display='none';
+    document.getElementById('resultBox').innerHTML='';
+}
+document.getElementById('kwInput').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch()});
+
+// ===== Product List =====
+function loadProducts(search=''){
+    const products=getProducts();
+    const allPrices=getPrices();
+    let filtered=search?products.filter(p=>p.name.toLowerCase().includes(search.toLowerCase())):products;
+    filtered.sort((a,b)=>(b.updated_at||'').localeCompare(a.updated_at||''));
+    renderProducts(filtered,allPrices);
+}
+
+function renderProducts(products,allPrices){
+    const el=document.getElementById('prodList');
+    if(!products.length){el.innerHTML=`<div class="empty"><i class="fas fa-box-open"></i><p>还没有记录，去搜索比价吧</p></div>`;return}
+    el.innerHTML=products.map(p=>{
+        const pPrices=allPrices.filter(pr=>pr.product_id===p.id);
+        // Latest price per platform
+        const latest={};
+        pPrices.forEach(pr=>{if(!latest[pr.platform]||pr.recorded_at>latest[pr.platform].recorded_at)latest[pr.platform]=pr});
+        const vals=Object.values(latest).sort((a,b)=>a.price-b.price);
+        const badges=vals.map(pr=>`<span class="mini-badge ${badge(pr.platform)}">${pr.platform} ¥${pr.price}</span>`).join('');
+        const min=vals[0]?.price,max=vals[vals.length-1]?.price;
+        const platformCount=Object.keys(latest).length;
+        return `<div class="prod-card" onclick="openProduct('${p.id}')">
+            <div class="prod-top">
+                <div><div class="prod-name">${esc(p.name)}</div>
+                <div class="prod-meta">${platformCount}个平台 · ${p.updated_at||''}</div></div>
+                <div>${min?`<span class="prod-lowest">¥${min}</span>`:''}
+                ${max&&max!==min?`<span class="prod-highest"> ~¥${max}</span>`:''}</div>
             </div>
-            ${badges ? `<div class="product-badges">${badges}</div>` : ''}
-            <div class="product-actions">
-                <button class="product-act" onclick="event.stopPropagation();openProduct(${p.id})"><i class="fas fa-chart-line"></i> 详情</button>
-                <button class="product-act" onclick="event.stopPropagation();addPriceToProduct(${p.id},'${esc(p.name)}')"><i class="fas fa-plus"></i> 加价格</button>
-                <button class="product-act" onclick="event.stopPropagation();deleteProduct(${p.id},'${esc(p.name)}')"><i class="fas fa-trash"></i> 删除</button>
+            ${badges?`<div class="prod-badges">${badges}</div>`:''}
+            <div class="prod-acts">
+                <button class="prod-act" onclick="event.stopPropagation();openProduct('${p.id}')"><i class="fas fa-chart-line"></i> 详情</button>
+                <button class="prod-act" onclick="event.stopPropagation();deleteProduct('${p.id}','${esc(p.name)}')"><i class="fas fa-trash"></i> 删除</button>
             </div>
         </div>`;
     }).join('');
 }
-
-function debounceSearch() {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => loadProducts(document.getElementById('searchInput').value.trim()), 300);
-}
-
-// ===== Auto Search =====
-async function autoSearch() {
-    const name = document.getElementById('productName').value.trim();
-    if (!name) { showToast('请先输入商品名称'); return; }
-
-    const btn = document.getElementById('autoSearchBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 搜索中...';
-
-    try {
-        const r = await fetch(API + '/api/search-and-save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        });
-        const data = await r.json();
-
-        if (r.ok) {
-            // Fill in the price inputs with results
-            const priceInputs = document.getElementById('priceInputs');
-            priceInputs.innerHTML = '';
-            priceRowCount = 0;
-
-            data.prices.forEach((pr, i) => {
-                const row = document.createElement('div');
-                row.className = 'price-row';
-                row.id = `priceRow${i}`;
-                row.innerHTML = `
-                    <select id="plat${i}">
-                        <option value="${pr.platform}" selected>${pr.platform}</option>
-                    </select>
-                    <input type="number" placeholder="价格" id="price${i}" step="0.01" min="0" value="${pr.price}">
-                    <input type="url" placeholder="链接（可选）" id="url${i}" value="${pr.url || ''}">
-                    ${i > 0 ? `<button class="remove-btn" onclick="document.getElementById('priceRow${i}').remove()">✕</button>` : ''}
-                `;
-                priceInputs.appendChild(row);
-                priceRowCount++;
-            });
-
-            // Show compare result
-            renderCompareResult(data);
-            loadStats();
-            showToast(`已找到 ${data.prices.length} 个平台的价格 ✅`);
-        } else {
-            showToast(data.error || '搜索失败');
-        }
-    } catch(e) {
-        showToast('网络错误: ' + e.message);
-    }
-
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-search"></i> 自动搜索各平台价格';
-}
-
-// ===== Quick Compare =====
-function addPriceRow() {
-    const container = document.getElementById('priceInputs');
-    const i = priceRowCount++;
-    const platforms = ['京东','淘宝','天猫','拼多多','苏宁','抖音','快手','其他'];
-    const options = platforms.map((p, idx) =>
-        `<option value="${p}" ${idx === i % platforms.length ? 'selected' : ''}>${p}</option>`
-    ).join('');
-    container.insertAdjacentHTML('beforeend', `
-        <div class="price-row" id="priceRow${i}">
-            <select id="plat${i}">${options}</select>
-            <input type="number" placeholder="价格" id="price${i}" step="0.01" min="0">
-            <input type="url" placeholder="链接（可选）" id="url${i}">
-            <button class="remove-btn" onclick="document.getElementById('priceRow${i}').remove()">✕</button>
-        </div>
-    `);
-}
-
-async function quickCompare() {
-    const name = document.getElementById('productName').value.trim();
-    if (!name) { showToast('请输入商品名称'); return; }
-
-    const prices = [];
-    for (let i = 0; i < priceRowCount; i++) {
-        const platEl = document.getElementById('plat' + i);
-        const priceEl = document.getElementById('price' + i);
-        const urlEl = document.getElementById('url' + i);
-        if (platEl && priceEl && priceEl.value) {
-            prices.push({
-                platform: platEl.value,
-                price: parseFloat(priceEl.value),
-                url: urlEl ? urlEl.value.trim() : ''
-            });
-        }
-    }
-
-    if (prices.length < 1) { showToast('至少输入一个平台价格'); return; }
-
-    const btn = document.querySelector('.submit-btn');
-    btn.disabled = true; btn.textContent = '保存中...';
-
-    try {
-        const r = await fetch(API + '/api/quick-compare', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name,
-                category: document.getElementById('productCategory').value.trim(),
-                prices
-            })
-        });
-        const data = await r.json();
-        if (r.ok) {
-            renderCompareResult(data);
-            loadStats();
-            showToast('比价记录已保存 ✅');
-        } else {
-            showToast(data.error || '保存失败');
-        }
-    } catch(e) {
-        showToast('网络错误: ' + e.message);
-    }
-    btn.disabled = false; btn.textContent = '开始比价';
-}
-
-function renderCompareResult(data) {
-    const el = document.getElementById('compareResult');
-    el.style.display = 'block';
-    const savingsHTML = data.savings > 0
-        ? `<div class="compare-savings">💰 最多可省 ¥${data.savings.toFixed(2)}</div>`
-        : '';
-
-    el.innerHTML = `
-        <div class="card">
-            <div class="compare-result">
-                <div class="compare-title">${esc(data.name)} 比价结果</div>
-                ${savingsHTML}
-                <div class="compare-list">
-                    ${data.prices.map((pr, i) => `
-                        <div class="compare-item ${pr.is_cheapest ? 'cheapest' : ''}">
-                            <span class="plat-badge ${platBadge(pr.platform)}">${pr.platform}</span>
-                            <span class="price-val ${pr.is_cheapest ? 'cheapest-price' : ''}">¥${pr.price}</span>
-                            ${pr.is_cheapest ? '<span class="cheapest-tag">最低价</span>' : ''}
-                            ${pr.url ? `<a class="go-link" href="${pr.url}" target="_blank">去购买 →</a>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-// ===== URL Parse =====
-async function parseURL() {
-    const url = document.getElementById('urlInput').value.trim();
-    if (!url) { showToast('请先粘贴链接'); return; }
-
-    try {
-        const r = await fetch(API + '/api/parse-url', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url })
-        });
-        const data = await r.json();
-        if (data.platform) {
-            // Set platform in first row
-            const sel = document.getElementById('plat0');
-            for (let o of sel.options) {
-                if (o.value === data.platform) { sel.value = data.platform; break; }
-            }
-            // Set URL in first row
-            document.getElementById('url0').value = url;
-            // Set name hint if empty
-            const nameInput = document.getElementById('productName');
-            if (!nameInput.value && data.name_hint) {
-                nameInput.value = data.name_hint;
-            }
-            showToast(`识别为${data.platform}商品 ✅`);
-        } else {
-            showToast('未识别到平台');
-        }
-    } catch(e) {
-        showToast('识别失败');
-    }
-}
+function debounceLoad(){clearTimeout(searchTimer);searchTimer=setTimeout(()=>loadProducts(document.getElementById('listSearch').value.trim()),300)}
 
 // ===== Product Detail =====
-async function openProduct(id) {
-    try {
-        const r = await fetch(API + `/api/products/${id}`);
-        const p = await r.json();
-        renderModal(p);
-    } catch(e) {
-        showToast('加载失败');
-    }
+function openProduct(id){
+    const products=getProducts();
+    const allPrices=getPrices();
+    const p=products.find(x=>x.id===id);
+    if(!p){toast('商品不存在');return}
+    const pPrices=allPrices.filter(pr=>pr.product_id===id);
+    renderModal(p,pPrices);
 }
 
-function renderModal(p) {
-    document.getElementById('modalTitle').textContent = p.name;
+function renderModal(p,prices){
+    document.getElementById('mTitle').textContent=p.name;
+    const byPlat={};
+    prices.forEach(pr=>{if(!byPlat[pr.platform])byPlat[pr.platform]=[];byPlat[pr.platform].push(pr)});
+    // Sort each platform's prices by date desc
+    Object.values(byPlat).forEach(arr=>arr.sort((a,b)=>(b.recorded_at||'').localeCompare(a.recorded_at||'')));
+    const plats=Object.keys(byPlat);
+    let h='';
+    if(!plats.length){h='<div class="empty"><i class="fas fa-tag"></i><p>暂无价格</p></div>'}
+    else{
+        const cur=plats.map(pl=>({platform:pl,price:byPlat[pl][0].price,url:byPlat[pl][0].url})).sort((a,b)=>a.price-b.price);
+        const best=cur[0],sv=cur.length>1?cur[cur.length-1].price-best.price:0;
+        if(sv>0)h+=`<div class="result-savings">💰 当前最低 ¥${best.price}（${best.platform}），省 ¥${sv.toFixed(2)}</div>`;
+        h+='<div class="result-list" style="margin-bottom:16px">';
+        cur.forEach((pr,i)=>{h+=`<div class="result-item ${i===0?'best':''}">
+            <span class="plat-badge ${badge(pr.platform)}">${pr.platform}</span>
+            <span class="result-price ${i===0?'best-price':''}">¥${pr.price}</span>
+            ${i===0?'<span class="best-tag">最低</span>':''}
+            ${pr.url?`<a class="go-link" href="${pr.url}" target="_blank">去购买 →</a>`:''}
+        </div>`});
+        h+='</div>';
+        h+='<h4 style="font-size:14px;margin-bottom:12px"><i class="fas fa-history" style="color:var(--pri)"></i> 价格历史</h4>';
+        plats.forEach(pl=>{
+            h+=`<div class="hist-plat"><div class="hist-hd">
+                <span class="mini-badge ${badge(pl)}">${pl}</span>
+                <span class="hist-cur">¥${byPlat[pl][0].price}</span></div>
+                <div class="hist-list">${byPlat[pl].map(it=>`<div class="hist-item">
+                    <span class="hp">¥${it.price}</span><span class="ht">${it.recorded_at||''}</span>
+                </div>`).join('')}</div></div>`;
+        });
+    }
+    h+=`<div class="add-form"><h4><i class="fas fa-plus" style="color:var(--pri)"></i> 添加新价格</h4>
+        <div class="add-row"><select id="mPlat">${PLATFORMS.map(p=>`<option value="${p.name}">${p.name}</option>`).join('')}<option value="其他">其他</option></select>
+            <input type="number" placeholder="价格" id="mPrice" step="0.01" min="0">
+            <input type="url" placeholder="链接" id="mUrl"></div>
+        <button class="submit-btn" style="margin-top:10px" onclick="submitPrice('${p.id}')">记录价格</button></div>`;
+    document.getElementById('mBody').innerHTML=h;
+    document.getElementById('modalBg').classList.add('show');
+}
 
-    // Group prices by platform
-    const byPlatform = {};
-    (p.prices || []).forEach(pr => {
-        if (!byPlatform[pr.platform]) byPlatform[pr.platform] = [];
-        byPlatform[pr.platform].push(pr);
+function submitPrice(pid){
+    const platform=document.getElementById('mPlat').value;
+    const price=document.getElementById('mPrice').value;
+    const url=document.getElementById('mUrl').value;
+    if(!price){toast('请输入价格');return}
+    const allPrices=getPrices();
+    allPrices.push({id:genId(),product_id:pid,platform,price:parseFloat(price),url,recorded_at:now()});
+    savePrices(allPrices);
+    // Update product timestamp
+    const products=getProducts();
+    const p=products.find(x=>x.id===pid);
+    if(p){p.updated_at=now();saveProducts(products)}
+    toast('已记录 ✅');
+    openProduct(pid);
+    updateStats();
+}
+
+function closeModal(){document.getElementById('modalBg').classList.remove('show');loadProducts()}
+
+function deleteProduct(id,name){
+    if(!confirm(`删除「${name}」？`))return;
+    let products=getProducts().filter(p=>p.id!==id);
+    let prices=getPrices().filter(p=>p.product_id!==id);
+    saveProducts(products);savePrices(prices);
+    toast('已删除');loadProducts();updateStats();
+}
+
+function clearAll(){
+    if(!confirm('确定清空所有比价数据？'))return;
+    localStorage.removeItem('bj_products');
+    localStorage.removeItem('bj_prices');
+    toast('已清空');loadProducts();updateStats();
+}
+
+function exportCSV(){
+    const products=getProducts();
+    const allPrices=getPrices();
+    let csv='\uFEFF商品名称,平台,价格,链接,记录时间\n';
+    products.forEach(p=>{
+        allPrices.filter(pr=>pr.product_id===p.id).forEach(pr=>{
+            csv+=`"${p.name}","${pr.platform}",${pr.price},"${pr.url||''}","${pr.recorded_at||''}"\n`;
+        });
     });
-
-    let html = '';
-    const platforms = Object.keys(byPlatform);
-
-    if (!platforms.length) {
-        html = '<div class="empty"><i class="fas fa-tag"></i><p>暂无价格记录</p></div>';
-    } else {
-        // Show current prices comparison first
-        const current = platforms.map(plat => {
-            const latest = byPlatform[plat][0]; // sorted DESC
-            return { platform: plat, price: latest.price, url: latest.url };
-        }).sort((a, b) => a.price - b.price);
-
-        const cheapest = current[0];
-        const savings = current.length > 1 ? current[current.length - 1].price - cheapest.price : 0;
-
-        if (savings > 0) {
-            html += `<div class="compare-savings">💰 当前最低价 ¥${cheapest.price}（${cheapest.platform}），最多省 ¥${savings.toFixed(2)}</div>`;
-        }
-
-        html += '<div class="compare-list" style="margin-bottom:16px">';
-        current.forEach((pr, i) => {
-            html += `
-                <div class="compare-item ${i === 0 ? 'cheapest' : ''}">
-                    <span class="plat-badge ${platBadge(pr.platform)}">${pr.platform}</span>
-                    <span class="price-val ${i === 0 ? 'cheapest-price' : ''}">¥${pr.price}</span>
-                    ${i === 0 ? '<span class="cheapest-tag">最低</span>' : ''}
-                    ${pr.url ? `<a class="go-link" href="${pr.url}" target="_blank">去购买 →</a>` : ''}
-                </div>`;
-        });
-        html += '</div>';
-
-        // Price history per platform
-        html += '<h4 style="font-size:14px;margin-bottom:12px"><i class="fas fa-history" style="color:var(--primary)"></i> 价格历史</h4>';
-        platforms.forEach(plat => {
-            const items = byPlatform[plat];
-            html += `
-                <div class="price-platform">
-                    <div class="price-platform-header">
-                        <span class="plat-mini ${platBadge(plat)}">${plat}</span>
-                        <span class="price-platform-current">¥${items[0].price}</span>
-                    </div>
-                    <div class="price-history-list">
-                        ${items.map(it => `
-                            <div class="price-history-item">
-                                <span class="ph-price">¥${it.price}</span>
-                                <span class="ph-time">${it.recorded_at}</span>
-                                ${it.note ? `<span style="color:var(--text3);font-size:11px">${esc(it.note)}</span>` : ''}
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>`;
-        });
-    }
-
-    // Add price form
-    html += `
-        <div class="add-price-form">
-            <h4><i class="fas fa-plus" style="color:var(--primary)"></i> 添加新价格</h4>
-            <div class="price-row" style="margin-top:8px">
-                <select id="modalPlat">
-                    <option value="京东">京东</option><option value="淘宝">淘宝</option>
-                    <option value="天猫">天猫</option><option value="拼多多">拼多多</option>
-                    <option value="苏宁">苏宁</option><option value="抖音">抖音</option>
-                    <option value="其他">其他</option>
-                </select>
-                <input type="number" placeholder="价格" id="modalPrice" step="0.01" min="0">
-                <input type="url" placeholder="链接" id="modalUrl">
-            </div>
-            <button class="submit-btn" style="margin-top:10px" onclick="submitModalPrice(${p.id})">记录价格</button>
-        </div>
-    `;
-
-    document.getElementById('modalBody').innerHTML = html;
-    document.getElementById('modalOverlay').classList.add('show');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`比价数据_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
 }
 
-async function submitModalPrice(productId) {
-    const platform = document.getElementById('modalPlat').value;
-    const price = document.getElementById('modalPrice').value;
-    const url = document.getElementById('modalUrl').value;
-
-    if (!price) { showToast('请输入价格'); return; }
-
-    try {
-        const r = await fetch(API + `/api/products/${productId}/prices`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ platform, price: parseFloat(price), url })
-        });
-        if (r.ok) {
-            showToast('价格已记录 ✅');
-            openProduct(productId); // Refresh modal
-            loadStats();
-        } else {
-            showToast('记录失败');
-        }
-    } catch(e) {
-        showToast('网络错误');
-    }
-}
-
-function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('show');
-    loadProducts(); // Refresh list
-}
-
-// ===== Add Price to existing product =====
-function addPriceToProduct(id, name) {
-    openProduct(id);
-}
-
-// ===== Delete =====
-async function deleteProduct(id, name) {
-    if (!confirm(`确认删除「${name}」及其所有价格记录？`)) return;
-    try {
-        await fetch(API + `/api/products/${id}`, { method: 'DELETE' });
-        showToast('已删除');
-        loadProducts();
-        loadStats();
-    } catch(e) {
-        showToast('删除失败');
-    }
-}
-
-// ===== Export =====
-function exportCSV() {
-    window.open(API + '/api/export', '_blank');
-}
-
-// ===== Util =====
-function esc(s) {
-    const d = document.createElement('div');
-    d.textContent = s || '';
-    return d.innerHTML;
-}
-
-// ===== Init =====
-loadStats();
-loadProducts();
+// Init
+updateStats();
 </script>
 </body>
 </html>
