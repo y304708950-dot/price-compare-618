@@ -120,92 +120,193 @@ def extract_product_info(url):
 
 # ===== Price Search =====
 def extract_price_from_text(text):
-    """Extract price from text like ¥199, 199元, $29.99"""
+    """Extract price from text like ¥199, 到手5499元, 售价6499元"""
     if not text:
         return None
-    # Match Chinese price patterns
+    # Ordered by specificity - most reliable first
     patterns = [
-        r'[¥￥]\s*(\d+\.?\d*)',  # ¥199, ￥199.9
-        r'(\d+\.?\d*)\s*元',      # 199元, 199.9元
-        r'价格[：:]\s*(\d+\.?\d*)', # 价格：199
-        r'(\d+\.?\d*)\s*起',      # 199起
-        r'\$\s*(\d+\.?\d*)',      # $29.99
+        (r'[¥￥]\s*([\d,]+\.?\d*)', 'sym'),          # ¥199, ￥1,999.9
+        (r'到手([\d,]+\.?\d*)\s*元', 'tohand'),       # 到手5499元 (actual price)
+        (r'售价([\d,]+\.?\d*)\s*元', 'sale'),          # 售价6499元
+        (r'优惠价([\d,]+\.?\d*)\s*元', 'discount'),    # 优惠价6899元
+        (r'([\d,]+\.?\d*)\s*元起', 'from'),            # 199元起
+        (r'价格[：:]\s*([\d,]+\.?\d*)', 'label'),      # 价格：199
+        (r'([\d,]+\.?\d*)\s*元', 'yuan'),              # 199元 (least specific)
     ]
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
+    for pat, tag in patterns:
+        m = re.search(pat, text)
+        if m:
             try:
-                return float(match.group(1))
+                val = float(m.group(1).replace(',', ''))
+                if 500 < val < 50000:  # phone/elec price range
+                    return val
+                elif 10 < val < 50000:  # wider range for other products
+                    return val
             except:
                 continue
     return None
 
-def search_platform_prices(product_name):
-    """Search prices across multiple platforms using duckduckgo"""
-    results = []
-    
-    try:
-        from duckduckgo_search import DDGS
-    except ImportError:
-        # Fallback: return empty if library not installed
-        return []
-    
-    platforms_to_search = [
-        ('京东', 'site:jd.com'),
-        ('淘宝', 'site:taobao.com'),
-        ('天猫', 'site:tmall.com'),
-        ('拼多多', 'site:pinduoduo.com OR site:yangkeduo.com'),
-        ('苏宁', 'site:suning.com'),
-        ('抖音', 'site:douyin.com'),
+def is_discount_amount(text, price):
+    """Check if the extracted value is likely a discount amount, not actual price"""
+    discount_patterns = [
+        r'直降\s*[¥￥]?\s*' + re.escape(str(int(price))),
+        r'降\s*[¥￥]?\s*' + re.escape(str(int(price))) + r'\s*元',
+        r'省\s*[¥￥]?\s*' + re.escape(str(int(price))),
+        r'减\s*[¥￥]?\s*' + re.escape(str(int(price))),
+        r'优惠\s*[¥￥]?\s*' + re.escape(str(int(price))),
     ]
-    
-    def search_single_platform(platform_info):
-        platform_name, site_filter = platform_info
+    for pat in discount_patterns:
+        if re.search(pat, text):
+            return True
+    return False
+
+def search_platform_prices(product_name):
+    """Search prices across platforms using ddgs (DuckDuckGo)"""
+    results = []
+    try:
+        from ddgs import DDGS
+    except ImportError:
+        return []
+
+    # Strategy 1: Per-platform keyword searches (more reliable than site: filter)
+    queries = [
+        ('京东', f'{product_name} 京东 价格'),
+        ('天猫', f'{product_name} 天猫 价格'),
+        ('淘宝', f'{product_name} 淘宝 价格'),
+        ('拼多多', f'{product_name} 拼多多 百亿补贴'),
+        ('苏宁', f'{product_name} 苏宁 价格'),
+    ]
+
+    # Also try a general comparison search
+    general_q = f'{product_name} 价格 比价 最低价'
+
+    def search_one(platform_name, query):
         try:
-            query = f"{product_name} 价格 {site_filter}"
-            with DDGS() as ddgs:
-                search_results = list(ddgs.text(query, max_results=5))
-                
-            for result in search_results:
-                title = result.get('title', '')
-                body = result.get('body', '')
-                href = result.get('href', '') or result.get('link', '')
-                
-                # Extract price from title and body
-                price = extract_price_from_text(title) or extract_price_from_text(body)
-                
-                if price and href:
-                    # Clean up URL
-                    if not href.startswith('http'):
-                        href = 'https://' + href
-                    
+            ddgs = DDGS()
+            raw = ddgs.text(query, max_results=5)
+            for r in raw:
+                title = r.get('title', '')
+                body = r.get('body', '')
+                href = r.get('href', '')
+                combined = title + ' ' + body
+                price = extract_price_from_text(combined)
+                # Skip if extracted value is a discount amount
+                if price and is_discount_amount(combined, price):
+                    price = None
+                # Try to find actual price in ¥ symbol context
+                if not price:
+                    for m in re.finditer(r'[¥￥]\s*([\d,]+)', combined):
+                        try:
+                            v = float(m.group(1).replace(',', ''))
+                            if 500 < v < 50000 and not is_discount_amount(combined, v):
+                                price = v
+                                break
+                        except:
+                            pass
+                if price:
                     return {
                         'platform': platform_name,
                         'price': price,
                         'url': href,
-                        'title': title[:100],
+                        'title': title[:80],
                         'source': 'search'
                     }
         except Exception as e:
-            print(f"Error searching {platform_name}: {e}")
-        
+            print(f'Search error [{platform_name}]: {e}')
         return None
-    
-    # Search all platforms in parallel
+
+    def search_general():
+        """Extract prices from comparison/review articles"""
+        try:
+            ddgs = DDGS()
+            raw = ddgs.text(general_q, max_results=10)
+            found = {}
+            platform_keywords = {
+                '京东': ['京东', 'jd', 'JD'],
+                '天猫': ['天猫', 'tmall', 'Tmall'],
+                '拼多多': ['拼多多', 'pdd', '百亿补贴', 'PDD'],
+                '苏宁': ['苏宁', 'suning'],
+                '抖音': ['抖音', 'douyin', '直播'],
+            }
+            for r in raw:
+                title = r.get('title', '')
+                body = r.get('body', '')
+                href = r.get('href', '')
+                combined = title + ' ' + body
+
+                # Find all prices in this result
+                all_prices = re.findall(r'[¥￥]\s*([\d,]+)', combined)
+                yuan_prices = re.findall(r'(\d{3,5})\s*元', combined)
+                price_candidates = []
+                for p in all_prices + yuan_prices:
+                    try:
+                        v = float(p.replace(',', ''))
+                        if 100 < v < 50000:
+                            price_candidates.append(v)
+                    except:
+                        pass
+
+                if not price_candidates:
+                    continue
+
+                # Try to associate prices with platforms
+                for plat, keywords in platform_keywords.items():
+                    if plat in found:
+                        continue
+                    for kw in keywords:
+                        if kw in combined:
+                            # Find price near this keyword
+                            idx = combined.index(kw)
+                            context = combined[max(0,idx-30):idx+50]
+                            ctx_price = extract_price_from_text(context)
+                            if ctx_price:
+                                found[plat] = {
+                                    'platform': plat,
+                                    'price': ctx_price,
+                                    'url': href,
+                                    'title': title[:80],
+                                    'source': 'comparison'
+                                }
+                                break
+                            elif price_candidates:
+                                # Use smallest price as best guess
+                                found[plat] = {
+                                    'platform': plat,
+                                    'price': min(price_candidates),
+                                    'url': href,
+                                    'title': title[:80],
+                                    'source': 'comparison'
+                                }
+                                break
+            return list(found.values())
+        except Exception as e:
+            print(f'General search error: {e}')
+            return []
+
+    # Run platform searches in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
-        futures = [executor.submit(search_single_platform, p) for p in platforms_to_search]
-        for future in concurrent.futures.as_completed(futures):
-            result = future.result()
-            if result:
-                results.append(result)
-    
+        futures = [executor.submit(search_one, p, q) for p, q in queries]
+        futures.append(executor.submit(search_general))
+        for f in concurrent.futures.as_completed(futures):
+            res = f.result()
+            if res:
+                if isinstance(res, list):
+                    results.extend(res)
+                else:
+                    results.append(res)
+
+    # Deduplicate by platform (keep lowest price)
+    best = {}
+    for r in results:
+        plat = r['platform']
+        if plat not in best or r['price'] < best[plat]['price']:
+            best[plat] = r
+    results = list(best.values())
+
     # Sort by price
     results.sort(key=lambda x: x['price'])
-    
-    # Mark cheapest
     for i, r in enumerate(results):
         r['is_cheapest'] = (i == 0)
-    
     return results
 
 # ===== API Routes =====
