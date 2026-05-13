@@ -60,6 +60,11 @@
         .submit-btn { width: 100%; padding: 12px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: .2s; }
         .submit-btn:hover { background: var(--primary-hover); }
         .submit-btn:disabled { background: #ccc; }
+        
+        .search-btn { width: 100%; padding: 12px; background: var(--blue); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: .2s; margin-bottom: 12px; }
+        .search-btn:hover { background: #096dd9; }
+        .search-btn:disabled { background: #ccc; }
+        .search-btn .fa { margin-right: 6px; }
 
         /* URL Parse */
         .url-bar { display: flex; gap: 8px; margin-bottom: 12px; }
@@ -132,6 +137,11 @@
         .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(100px); background: #333; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; z-index: 200; transition: .3s; }
         .toast.show { transform: translateX(-50%) translateY(0); }
 
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: var(--text3); }
+        .loading .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         /* Empty */
         .empty { text-align: center; padding: 40px 20px; color: var(--text3); }
         .empty i { font-size: 40px; margin-bottom: 8px; display: block; }
@@ -157,7 +167,7 @@
 
 <div class="header">
     <h1>📊 比价助手</h1>
-    <p class="sub">多平台价格记录与对比</p>
+    <p class="sub">多平台价格自动搜索与对比</p>
     <div class="header-stats" id="headerStats"></div>
     <div class="header-actions">
         <button class="header-btn" onclick="exportCSV()"><i class="fas fa-download"></i> 导出CSV</button>
@@ -169,7 +179,7 @@
     <!-- Tabs -->
     <div class="tabs">
         <button class="tab active" data-view="list" onclick="switchView('list')">📦 商品列表</button>
-        <button class="tab" data-view="quick" onclick="switchView('quick')">⚡ 快速比价</button>
+        <button class="tab" data-view="quick" onclick="switchView('quick')">🔍 搜索比价</button>
     </div>
 
     <!-- List View -->
@@ -196,6 +206,11 @@
                     <label class="form-label">商品名称</label>
                     <input type="text" class="form-input" id="productName" placeholder="如：iPhone 16 Pro 256GB">
                 </div>
+
+                <!-- Auto Search Button -->
+                <button class="search-btn" id="autoSearchBtn" onclick="autoSearch()">
+                    <i class="fas fa-search"></i> 自动搜索各平台价格
+                </button>
 
                 <div class="form-group">
                     <label class="form-label">各平台价格</label>
@@ -311,7 +326,7 @@ async function loadProducts(search = '') {
 function renderProducts(products) {
     const el = document.getElementById('productList');
     if (!products.length) {
-        el.innerHTML = `<div class="empty"><i class="fas fa-box-open"></i><p>还没有商品，点击「快速比价」添加</p></div>`;
+        el.innerHTML = `<div class="empty"><i class="fas fa-box-open"></i><p>还没有商品，输入商品名自动搜索价格</p></div>`;
         return;
     }
     el.innerHTML = products.map(p => {
@@ -343,6 +358,60 @@ function renderProducts(products) {
 function debounceSearch() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => loadProducts(document.getElementById('searchInput').value.trim()), 300);
+}
+
+// ===== Auto Search =====
+async function autoSearch() {
+    const name = document.getElementById('productName').value.trim();
+    if (!name) { showToast('请先输入商品名称'); return; }
+
+    const btn = document.getElementById('autoSearchBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 搜索中...';
+
+    try {
+        const r = await fetch(API + '/api/search-and-save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        const data = await r.json();
+
+        if (r.ok) {
+            // Fill in the price inputs with results
+            const priceInputs = document.getElementById('priceInputs');
+            priceInputs.innerHTML = '';
+            priceRowCount = 0;
+
+            data.prices.forEach((pr, i) => {
+                const row = document.createElement('div');
+                row.className = 'price-row';
+                row.id = `priceRow${i}`;
+                row.innerHTML = `
+                    <select id="plat${i}">
+                        <option value="${pr.platform}" selected>${pr.platform}</option>
+                    </select>
+                    <input type="number" placeholder="价格" id="price${i}" step="0.01" min="0" value="${pr.price}">
+                    <input type="url" placeholder="链接（可选）" id="url${i}" value="${pr.url || ''}">
+                    ${i > 0 ? `<button class="remove-btn" onclick="document.getElementById('priceRow${i}').remove()">✕</button>` : ''}
+                `;
+                priceInputs.appendChild(row);
+                priceRowCount++;
+            });
+
+            // Show compare result
+            renderCompareResult(data);
+            loadStats();
+            showToast(`已找到 ${data.prices.length} 个平台的价格 ✅`);
+        } else {
+            showToast(data.error || '搜索失败');
+        }
+    } catch(e) {
+        showToast('网络错误: ' + e.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-search"></i> 自动搜索各平台价格';
 }
 
 // ===== Quick Compare =====

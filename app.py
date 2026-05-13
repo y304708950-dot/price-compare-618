@@ -1,7 +1,7 @@
 """
 比价助手 - 多平台价格对比工具
-支持：京东、淘宝/天猫、拼多多、苏宁、其他
-功能：产品管理、多平台比价、价格历史、数据导出
+支持：京东、淘宝/天猫、拼多多、苏宁、抖音
+功能：产品管理、多平台比价、价格历史、数据导出、自动抓取
 """
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -12,7 +12,8 @@ import os
 import csv
 import io
 from datetime import datetime
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote_plus
+import concurrent.futures
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
@@ -117,6 +118,96 @@ def extract_product_info(url):
         pass
     return info
 
+# ===== Price Search =====
+def extract_price_from_text(text):
+    """Extract price from text like ¥199, 199元, $29.99"""
+    if not text:
+        return None
+    # Match Chinese price patterns
+    patterns = [
+        r'[¥￥]\s*(\d+\.?\d*)',  # ¥199, ￥199.9
+        r'(\d+\.?\d*)\s*元',      # 199元, 199.9元
+        r'价格[：:]\s*(\d+\.?\d*)', # 价格：199
+        r'(\d+\.?\d*)\s*起',      # 199起
+        r'\$\s*(\d+\.?\d*)',      # $29.99
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            try:
+                return float(match.group(1))
+            except:
+                continue
+    return None
+
+def search_platform_prices(product_name):
+    """Search prices across multiple platforms using duckduckgo"""
+    results = []
+    
+    try:
+        from duckduckgo_search import DDGS
+    except ImportError:
+        # Fallback: return empty if library not installed
+        return []
+    
+    platforms_to_search = [
+        ('京东', 'site:jd.com'),
+        ('淘宝', 'site:taobao.com'),
+        ('天猫', 'site:tmall.com'),
+        ('拼多多', 'site:pinduoduo.com OR site:yangkeduo.com'),
+        ('苏宁', 'site:suning.com'),
+        ('抖音', 'site:douyin.com'),
+    ]
+    
+    def search_single_platform(platform_info):
+        platform_name, site_filter = platform_info
+        try:
+            query = f"{product_name} 价格 {site_filter}"
+            with DDGS() as ddgs:
+                search_results = list(ddgs.text(query, max_results=5))
+                
+            for result in search_results:
+                title = result.get('title', '')
+                body = result.get('body', '')
+                href = result.get('href', '') or result.get('link', '')
+                
+                # Extract price from title and body
+                price = extract_price_from_text(title) or extract_price_from_text(body)
+                
+                if price and href:
+                    # Clean up URL
+                    if not href.startswith('http'):
+                        href = 'https://' + href
+                    
+                    return {
+                        'platform': platform_name,
+                        'price': price,
+                        'url': href,
+                        'title': title[:100],
+                        'source': 'search'
+                    }
+        except Exception as e:
+            print(f"Error searching {platform_name}: {e}")
+        
+        return None
+    
+    # Search all platforms in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+        futures = [executor.submit(search_single_platform, p) for p in platforms_to_search]
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result:
+                results.append(result)
+    
+    # Sort by price
+    results.sort(key=lambda x: x['price'])
+    
+    # Mark cheapest
+    for i, r in enumerate(results):
+        r['is_cheapest'] = (i == 0)
+    
+    return results
+
 # ===== API Routes =====
 
 @app.route('/')
@@ -132,6 +223,111 @@ def parse_url():
         return jsonify({'error': '请提供链接'}), 400
     info = extract_product_info(url)
     return jsonify(info)
+
+@app.route('/api/search-prices', methods=['POST'])
+def search_prices():
+    """Auto search prices for a product across platforms"""
+    data = request.json
+    product_name = data.get('name', '').strip()
+    
+    if not product_name:
+        return jsonify({'error': '请输入商品名称'}), 400
+    
+    try:
+        results = search_platform_prices(product_name)
+        
+        if not results:
+            return jsonify({
+                'product_name': product_name,
+                'results': [],
+                'message': '未找到价格信息，请尝试手动输入'
+            })
+        
+        # Calculate savings
+        prices = [r['price'] for r in results]
+        savings = max(prices) - min(prices) if len(prices) >= 2 else 0
+        
+        return jsonify({
+            'product_name': product_name,
+            'results': results,
+            'savings': savings,
+            'cheapest': results[0] if results else None
+        })
+    except Exception as e:
+        return jsonify({'error': f'搜索失败: {str(e)}'}), 500
+
+@app.route('/api/search-and-save', methods=['POST'])
+def search_and_save():
+    """Search prices and save to database"""
+    data = request.json
+    product_name = data.get('name', '').strip()
+    
+    if not product_name:
+        return jsonify({'error': '请输入商品名称'}), 400
+    
+    try:
+        search_results = search_platform_prices(product_name)
+        
+        if not search_results:
+            return jsonify({'error': '未找到价格信息'}), 404
+        
+        conn = get_db()
+        
+        # Check if product exists
+        existing = conn.execute(
+            'SELECT id FROM products WHERE name = ? ORDER BY updated_at DESC LIMIT 1',
+            (product_name,)
+        ).fetchone()
+        
+        if existing:
+            product_id = existing['id']
+        else:
+            cur = conn.execute(
+                'INSERT INTO products (name, category) VALUES (?, ?)',
+                (product_name, data.get('category', ''))
+            )
+            product_id = cur.lastrowid
+        
+        # Save prices
+        for result in search_results:
+            conn.execute(
+                'INSERT INTO prices (product_id, platform, price, url, note) VALUES (?, ?, ?, ?, ?)',
+                (product_id, result['platform'], result['price'], 
+                 result.get('url', ''), f"自动抓取 - {result.get('title', '')}")
+            )
+        
+        conn.execute(
+            'UPDATE products SET updated_at = datetime("now","localtime") WHERE id = ?',
+            (product_id,)
+        )
+        conn.commit()
+        
+        # Get latest prices for response
+        latest_prices = conn.execute('''
+            SELECT platform, price, url FROM prices
+            WHERE product_id = ? AND id IN (
+                SELECT MAX(id) FROM prices WHERE product_id = ? GROUP BY platform
+            )
+            ORDER BY price ASC
+        ''', (product_id, product_id)).fetchall()
+        
+        conn.close()
+        
+        return jsonify({
+            'product_id': product_id,
+            'name': product_name,
+            'prices': [{
+                'platform': pr['platform'],
+                'price': pr['price'],
+                'url': pr['url'],
+                'is_cheapest': i == 0
+            } for i, pr in enumerate(latest_prices)],
+            'savings': latest_prices[-1]['price'] - latest_prices[0]['price'] if len(latest_prices) >= 2 else 0,
+            'message': f'已找到 {len(search_results)} 个平台的价格'
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': f'搜索失败: {str(e)}'}), 500
 
 # --- Products CRUD ---
 @app.route('/api/products', methods=['GET'])
@@ -170,7 +366,6 @@ def list_products():
     rows = conn.execute(query, params).fetchall()
     products = []
     for row in rows:
-        # Get latest prices per platform
         price_rows = conn.execute('''
             SELECT platform, price, url, note, recorded_at FROM prices
             WHERE product_id = ? AND id IN (
@@ -217,7 +412,6 @@ def create_product():
     product_id = cur.lastrowid
     conn.commit()
 
-    # If prices provided, add them
     prices = data.get('prices', [])
     for pr in prices:
         if pr.get('price') and pr.get('platform'):
@@ -295,7 +489,6 @@ def add_price(product_id):
         return jsonify({'error': '平台和价格不能为空'}), 400
 
     conn = get_db()
-    # Check product exists
     product = conn.execute('SELECT id FROM products WHERE id = ?', (product_id,)).fetchone()
     if not product:
         conn.close()
@@ -378,7 +571,6 @@ def quick_compare():
         return jsonify({'error': '至少需要一个平台价格'}), 400
 
     conn = get_db()
-    # Check if similar product exists
     existing = conn.execute(
         'SELECT id FROM products WHERE name = ? ORDER BY updated_at DESC LIMIT 1',
         (name,)
@@ -407,7 +599,6 @@ def quick_compare():
     )
     conn.commit()
 
-    # Return comparison result
     latest_prices = conn.execute('''
         SELECT platform, price, url FROM prices
         WHERE product_id = ? AND id IN (
